@@ -19,3 +19,5 @@ location.coords.speed — meters per second
 
 pace (min/km) = 
 speed (km/h) = floor(1000 / coords.speed) + speed % 60
+
+lauftr123

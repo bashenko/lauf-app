@@ -18,7 +18,8 @@ export default class App extends Component {
     };
   }
 
-  componentWillMount() {
+  // componentWillMount() {
+  componentDidMount() {
     var _this=this;
     Location.watchPositionAsync({
 enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fitness,
@@ -39,7 +40,7 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
         distance: haversine({latitude: this.state.initLat, longitude: this.state.initLong}, {latitude: this.state.lat, 
           longitude: this.state.long,}, {unit: 'meter'}),
       });
-      console.log(this.state.start)
+      // console.log(this.state.start)
     });
 
     if (Platform.OS === 'android' && !Constants.isDevice) {
@@ -67,19 +68,19 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
     });
   };
 
-  componentDidMount() {
-    this.watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        this.setState({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          error: null,
-        });
-      },
-      (error) => this.setState({ error: error.message }),
-      { enableHighAccuracy: true, timeout: 100, maximumAge: 0, distanceFilter: 1},
-    );
-  }
+  // componentDidMount() {
+  //   this.watchId = navigator.geolocation.watchPosition(
+  //     (position) => {
+  //       this.setState({
+  //         latitude: position.coords.latitude,
+  //         longitude: position.coords.longitude,
+  //         error: null,
+  //       });
+  //     },
+  //     (error) => this.setState({ error: error.message }),
+  //     { enableHighAccuracy: true, timeout: 100, maximumAge: 0, distanceFilter: 1},
+  //   );
+  // }
 
   componentWillUnmount() {
     navigator.geolocation.clearWatch(this.watchId);
@@ -88,6 +89,7 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
   
 
   render() {
+    if (this.state.speed >= 0){
     return (
       <View style={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Text>Initial Latitude: {this.state.initLat}</Text>
@@ -95,11 +97,10 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
         <Text>Ongoing Latitude: {this.state.lat}</Text>
         <Text>Ongoing Longitude: {this.state.long}</Text>
        
-        {this.state.distance ? <Text>Distance since start: {Math.floor(this.state.distance*100)/100}m</Text> : <Text>Distance since start: 0m</Text>}
-        
+        {this.state.distance ? <Text>Distance since start: {Math.floor(this.state.distance*100)/100}m</Text> : <Text>Distance since start: 0 m</Text>}
         
         <Text>Speed:  {this.state.speed} meters per second</Text>
-        <Text>{Math.floor(100/60) + " h"}, {100%60 + " min" }</Text>
+        {/* <Text>{Math.floor(100/60) + " h"}, {100%60 + " min" }</Text> */}
         <Text> {Math.round(this.state.speed * Math.pow(60,2))} meters in hour</Text>
         <Text> {Math.round(this.state.speed * Math.pow(60,2)/10)/100} kilometers in hour</Text>
 
@@ -112,5 +113,13 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
         {this.state.error ? <Text>Error: {this.state.error}</Text> : null}
       </View>
     );
+  } else {
+    return (
+    <View style={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Text>You better move</Text>
+        {this.state.error ? <Text>Error: {this.state.error}</Text> : null}
+      </View>
+    );
+  }
   }
 }
