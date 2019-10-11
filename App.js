@@ -7,9 +7,76 @@ import  Trackers  from './components/Trackers.js';
 import LapCard from './components/LapCard.js';
 import PaceTracker from './components/PaceTracker.js';
 
-export default class App extends Component {
+import * as Location from 'expo-location';
+import * as Permissions from 'expo-permissions';
+import haversine from 'haversine';
 
-  
+export default class App extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      location: null,
+      errorMessage: null,
+      latitude: null,
+      longitude: null,
+      error: null,
+    };
+  }
+
+  componentDidMount() {
+    var _this=this;
+    Location.watchPositionAsync({
+enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fitness,
+    }, location2 => {
+      _this.setState({
+        location2, 
+        speed: location2.coords.speed, 
+        long: location2.coords.longitude, 
+        lat: location2.coords.latitude,
+        start: {
+          latitude: this.state.initLat, 
+          longitude: this.state.initLong,
+        },
+        end: {
+          latitude: this.state.lat, 
+          longitude: this.state.long,
+        },
+        distance: haversine({latitude: this.state.initLat, longitude: this.state.initLong}, {latitude: this.state.lat, 
+          longitude: this.state.long,}, {unit: 'meter'}),
+      });
+      // console.log(this.state.start)
+    });
+
+    if (Platform.OS === 'android' && !Constants.isDevice) {
+      this.setState({
+        errorMessage: 'Oops, this will not work on Sketch in an Android emulator. Try it on your device!',
+      });
+    } else {
+      this._getLocationAsync();
+    }
+  }
+
+  _getLocationAsync = async () => {
+    let { status } = await Permissions.askAsync(Permissions.LOCATION);
+    if (status !== 'granted') {
+      this.setState({
+        errorMessage: 'Permission to access location was denied',
+      });
+    }
+
+    let location = await Location.getCurrentPositionAsync({});
+    this.setState({ 
+      location, 
+      initLat: location.coords.latitude, 
+      initLong: location.coords.longitude,
+    });
+  }
+
+  componentWillUnmount() {
+    navigator.geolocation.clearWatch(this.watchId);
+  }
+
  render() {
     return (
       <View>
