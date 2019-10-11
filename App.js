@@ -78,24 +78,39 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
   }
 
  render() {
+    let speed = this.state.speed; 
+    let distance;
+    let paceM;
+    let paceS;
+    let padToTwo = (number) => (number <= 9 ? `0${number}`: number);
+
+
+    if (speed > 0){
+      distance = Math.floor(this.state.distance*100)/100;
+      paceM = Math.floor(1000/this.state.speed / 60);
+      paceS = Math.floor(1000/this.state.speed % 60);
+    } else {
+      distance = 'paused';
+      paceM = "00";
+      paceS = "00";
+    }
+
     return (
       <View>
         <LinearGradient
           colors={['#009DF0', '#20DCFF']}
           style={styles.gradientContainer}>
           <Topnav />
-          <Trackers distance="100" lapTime="1:32" time="3:00" />
-          <PaceTracker pace="3:35"/>
+          <Trackers distance={distance} lapTime="1:32" time="3:00" />
+          <PaceTracker pace={padToTwo(paceM) + ":" + padToTwo(paceS)} />
           
           <View style={{flex: 1, position: 'absolute', top: 500, height: 125, width: '100%', flexDirection: 'row'}}>
             <ScrollView scrollEventThrottle={16} horizontal={true} showsHorizontalScrollIndicator={false} style={{flex: 4, height: 125}}>
               <LapCard lapNum="1" lapTime="5:45" />
               <LapCard lapNum="2" lapTime="5:45" />
               <LapCard lapNum="3" lapTime="5:45" />
-              <LapCard lapNum="4" lapTime="5:45" />
-              <LapCard lapNum="5" lapTime="5:45" />
             </ScrollView>
-            <TouchableOpacity onPress={() => console.log('lap pressed!')} style={{height: 125}}>
+            <TouchableOpacity onPress={() => console.log('lap pressed!', distance, speed)} style={{height: 125}}>
             <View style={{
                 width: 100, 
                 marginHorizontal: 5, 
