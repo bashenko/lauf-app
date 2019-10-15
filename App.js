@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import  Topnav  from './components/Topnav/Topnav.js';
 import  Trackers  from './components/Trackers.js';
 import LapCard from './components/LapCard.js';
+import LapCards from './components/LapCards.js';
 import PaceTracker from './components/PaceTracker.js';
 
 import * as Location from 'expo-location';
@@ -21,8 +22,75 @@ export default class App extends Component {
       latitude: null,
       longitude: null,
       error: null,
+      min: 0,
+      sec: 0,
+      msec: 0,
     };
+
+    this.lapArr = [];
+ 
+    this.interval = null;
+
+    
   }
+
+  handleToggle = () => {
+    console.log(this.state.start)
+    this.setState(
+        {
+            start: !this.state.start
+        },
+        () => this.handleStart()
+    );
+};
+
+handleLap = (min, sec, msec) => {
+  this.lapArr = [
+      ...this.lapArr,
+      {min, sec, msec}
+      
+  ]
+};
+
+handleStart = () => {
+  if (this.state.start) {
+      this.interval = setInterval(() => {
+          if (this.state.msec !== 99) {
+              this.setState({
+                  msec: this.state.msec + 1
+              });
+          } else if (this.state.sec !== 59) {
+              this.setState({
+                  msec: 0,
+                  sec: ++this.state.sec
+              });
+          } else {
+              this.setState({
+                  msec: 0,
+                  sec: 0,
+                  min: ++this.state.min
+              });
+          }
+      }, 1);
+
+  } else {
+      clearInterval(this.interval);
+  }
+};
+
+handleReset = () => {
+  this.setState({
+      min: 0,
+      sec: 0,
+      msec: 0,
+      distance: 0,
+      start: false
+  });
+
+  clearInterval(this.interval);
+
+  this.lapArr = [];
+};
 
   componentDidMount() {
     var _this=this;
@@ -31,21 +99,22 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
     }, location2 => {
       _this.setState({
         location2, 
+        
         speed: location2.coords.speed, 
         long: location2.coords.longitude, 
         lat: location2.coords.latitude,
-        start: {
+        distStart: {
           latitude: this.state.initLat, 
           longitude: this.state.initLong,
         },
-        end: {
+        distEnd: {
           latitude: this.state.lat, 
           longitude: this.state.long,
         },
         distance: haversine({latitude: this.state.initLat, longitude: this.state.initLong}, {latitude: this.state.lat, 
           longitude: this.state.long,}, {unit: 'meter'}),
       });
-      // console.log(this.state.start)
+       
     });
 
     if (Platform.OS === 'android' && !Constants.isDevice) {
@@ -84,15 +153,14 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
     let paceS;
     let padToTwo = (number) => (number <= 9 ? `0${number}`: number);
 
-
     if (speed > 0){
       distance = Math.floor(this.state.distance*100)/100;
       paceM = Math.floor(1000/this.state.speed / 60);
       paceS = Math.floor(1000/this.state.speed % 60);
     } else {
       distance = 'paused';
-      paceM = "00";
-      paceS = "00";
+      paceM = "0";
+      paceS = "0";
     }
 
     return (
@@ -101,16 +169,15 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
           colors={['#009DF0', '#20DCFF']}
           style={styles.gradientContainer}>
           <Topnav />
-          <Trackers distance={distance} lapTime="1:32" time="3:00" />
+          <Trackers distance={distance} lapTime={padToTwo(this.lapArr.min)+":"+padToTwo(this.lapArr.sec)+":"+padToTwo(this.lapArr.msec)} time={padToTwo(this.state.min) + ':' + padToTwo(this.state.sec) + ':' + padToTwo(this.state.msec)} />
           <PaceTracker pace={padToTwo(paceM) + ":" + padToTwo(paceS)} />
-          
+              
           <View style={{flex: 1, position: 'absolute', top: 500, height: 125, width: '100%', flexDirection: 'row'}}>
             <ScrollView scrollEventThrottle={16} horizontal={true} showsHorizontalScrollIndicator={false} style={{flex: 4, height: 125}}>
-              <LapCard lapNum="1" lapTime="5:45" />
-              <LapCard lapNum="2" lapTime="5:45" />
-              <LapCard lapNum="3" lapTime="5:45" />
+              <LapCards lap={this.lapArr}/>
             </ScrollView>
-            <TouchableOpacity onPress={() => console.log('lap pressed!', distance, speed)} style={{height: 125}}>
+
+            <TouchableOpacity onPress={()=>this.handleLap(this.state.min, this.state.sec, this.state.msec)} disabled={!this.state.start} style={{height: 125}}>
             <View style={{
                 width: 100, 
                 marginHorizontal: 5, 
@@ -130,9 +197,31 @@ enableHighAccuracy:true, timeInterval:50, activityType: Location.ActivityType.Fi
             </TouchableOpacity>
           </View>
           
-          <View style={{width: '100%', height: 120, bottom: 10, position: 'absolute', flexDirection: 'column', textAlign: "center", flex: 1}}>
-            <Button onPress={() => console.log('Stopwatch START')} title={'start'} color="white" style={{ flex: 1, width: '50%'}}></Button>
-            <Button onPress={() => console.log('Stopwatch STOP')} title={'stop'} color="white" style={{ flex: 1, width: '50%'}}></Button>
+          
+
+          {/* 
+            On START
+            — get initial location
+            — record new lap location
+            — record initial lap time
+            — Timer starts
+            — Distance start counting
+
+            On RECORD LAP
+            — get Lap final Location
+            — calculate Lap distance
+            — display lap time
+
+            — render lap card
+
+            — record new lap location
+            — record initial lap time 
+            */}
+            
+          <View style={{width: '100%', bottom: 20, position: 'absolute', flexDirection: 'column', textAlign: "center", flex: 1}}>
+            <Button onPress={this.handleToggle} title={!this.state.start? 'Start': 'Stop'} color="white" style={{ flex: 1, width: '50%'}}></Button>
+            <Button onPress={()=>this.handleLap(this.state.min, this.state.sec, this.state.msec)} disabled={!this.state.start} title='Lap' color="white" style={{ flex: 1, width: '50%'}}></Button>
+            <Button onPress={this.handleReset} title='Reset' color="white" style={{ flex: 1, width: '50%'}}></Button>
           </View>
           
         </LinearGradient>
