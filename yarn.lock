@@ -3975,6 +3975,11 @@ path-type@^2.0.0:
   dependencies:
     pify "^2.0.0"
 
+performance-now@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/performance-now/-/performance-now-2.1.0.tgz#6309f4e0e5fa913ec1c69307ae364b4b377c9e7b"
+  integrity sha1-Ywn04OX6kT7BxpMHrjZLSzd8nns=
+
 pify@^2.0.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/pify/-/pify-2.3.0.tgz#ed141a6ac043a849ea588498e7dca8b15330e90c"
@@ -4079,7 +4084,7 @@ promise@^7.1.1:
   dependencies:
     asap "~2.0.3"
 
-prop-types@^15.5.8, prop-types@^15.6.0, prop-types@^15.6.1, prop-types@^15.6.2:
+prop-types@^15.5.8, prop-types@^15.6.0, prop-types@^15.6.1, prop-types@^15.6.2, prop-types@^15.7.2:
   version "15.7.2"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.7.2.tgz#52c41e75b8c87e72b9d9360e0206b99dcbffa6c5"
   integrity sha512-8QQikdH7//R2vurIJSutZ1smHYTcLpRWEOlHnzcWHmBYrOGUysKwSsrC89BCiFj3CbrfJ/nXFdJepOVrY1GCHQ==
@@ -4256,6 +4261,11 @@ react-proxy@^1.1.7:
   dependencies:
     lodash "^4.6.1"
     react-deep-force-update "^1.0.0"
+
+react-timer-hook@^1.1.7:
+  version "1.1.7"
+  resolved "https://registry.yarnpkg.com/react-timer-hook/-/react-timer-hook-1.1.7.tgz#22c8dcf9bc7c1277b81e566298e1c5c8f9ea6673"
+  integrity sha512-Moolg4qj1FpdQmkPXe8mE3GPeS2lgJnxvldfdVnSzPMM6KwWzmks0OPT5LxcdYFyuQB0rulQHD4yAu9RQqWh7A==
 
 react-timer-mixin@^0.13.4:
   version "0.13.4"

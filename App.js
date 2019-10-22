@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, {Component} from "react";
 import {
 	Platform,
 	Text,
@@ -9,7 +9,8 @@ import {
 	ScrollView,
 	TouchableOpacity
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import {LinearGradient} from "expo-linear-gradient";
+import PropTypes from 'prop-types'; // ES6
 
 import Topnav from "./components/Topnav/Topnav.js";
 import Trackers from "./components/Trackers.js";
@@ -21,82 +22,95 @@ import * as Location from "expo-location";
 import * as Permissions from "expo-permissions";
 import haversine from "haversine";
 import * as Constants from "expo-constants";
+import {withStopWatch} from "./libs/withStopWatch";
 
-export default class App extends Component {
+class App extends Component {
+
+	static propTypes = {
+		stopWatch: {
+			milliseconds: PropTypes.number,
+			seconds: PropTypes.number,
+			minutes: PropTypes.number,
+			start: PropTypes.func,
+			stop: PropTypes.func,
+			reset: PropTypes.func,
+			lap: PropTypes.func,
+			restart: PropTypes.func,
+		}
+	};
+
+	watchId;
+
 	constructor(props) {
 		super(props);
 
-		this.state = {
+		this.state = this.initialState;
+
+		this.lapArr = [];
+
+	}
+
+
+	get initialState() {
+		return {
+			timerIsActive: 'idol', // idol, play, pause
+			currentPosition: {lat: 0, long: 0},
+			initPosition: {lat: 0, long: 0},
+
+			// old state
 			location: null,
 			errorMessage: null,
 			latitude: null,
 			longitude: null,
 			error: null,
-			min: 0,
-			sec: 0,
-			msec: 0
-		};
-
-		this.lapArr = [];
-
-		this.interval = null;
+		}
 	}
 
-	handleToggle = () => {
-		console.log(this.state.start);
-		this.setState(
-			{
-				start: !this.state.start
-			},
-			() => this.handleStart()
-		);
-	};
+	handleToggleTimer = () => {
+		const {stopWatch: {start, stop}} = this.props;
 
-	handleLap = (min, sec, msec) => {
-		this.lapArr = [...this.lapArr, { min, sec, msec }];
-	};
-
-	handleStart = () => {
-		if (this.state.start) {
-			this.interval = setInterval(() => {
-				if (this.state.msec !== 99) {
-					this.setState({
-						msec: this.state.msec + 1
-					});
-				} else if (this.state.sec !== 59) {
-					this.setState({
-						msec: 0,
-						sec: ++this.state.sec
-					});
-				} else {
-					this.setState({
-						msec: 0,
-						sec: 0,
-						min: ++this.state.min
-					});
-				}
-			}, 1);
-		} else {
-			clearInterval(this.interval);
+		if (this.state.timerIsActive === 'idol') {
+			start();
+			this.setState({
+				...this.state,
+				timerIsActive: 'play',
+			})
+		} else if (this.state.timerIsActive === 'pause') {
+			start();
+			this.setState({
+				...this.state,
+				timerIsActive: 'play',
+			})
+		} else if (this.state.timerIsActive === 'play') {
+			stop();
+			this.setState({
+				...this.state,
+				timerIsActive: 'pause',
+			})
 		}
 	};
 
-	handleReset = () => {
-		this.setState({
-			min: 0,
-			sec: 0,
-			msec: 0,
-			distance: 0,
-			start: false
-		});
-
-		clearInterval(this.interval);
-
-		this.lapArr = [];
+	timeToTimestamp = () => {
+		const {stopWatch: {seconds, minutes, hours,}} = this.props;
 	};
 
-	componentDidMount() {
-		var _this = this;
+	handleTimeLockLap = () => {
+		const {lap} = this.props.stopWatch;
+		lap();
+	};
+
+	handleReset = () => {
+		const {reset, stop} = this.props.stopWatch;
+		stop();
+		reset();
+		this.setState({
+			distance: 0,
+			timerIsActive: 'idol'
+		});
+	};
+
+
+	watchDevicePosition = () =>{
 		Location.watchPositionAsync(
 			{
 				enableHighAccuracy: true,
@@ -104,27 +118,33 @@ export default class App extends Component {
 				activityType: Location.ActivityType.Fitness
 			},
 			location2 => {
-				_this.setState({
+				this.setState({
 					location2,
-
 					speed: location2.coords.speed,
-					long: location2.coords.longitude,
-					lat: location2.coords.latitude,
+					currentPosition:{
+						long: location2.coords.longitude,
+						lat: location2.coords.latitude,
+					},
 					distStart: {
-						latitude: this.state.initLat,
-						longitude: this.state.initLong
+						latitude: this.state.initPosition.lat,
+						longitude: this.state.initPosition.long,
 					},
 					distEnd: {
-						latitude: this.state.lat,
-						longitude: this.state.long
+						latitude: this.state.currentPosition.lat,
+						longitude: this.state.currentPosition.long,
 					},
 					distance: haversine(
-						{ latitude: this.state.initLat, longitude: this.state.initLong },
 						{
-							latitude: this.state.lat,
-							longitude: this.state.long
+							latitude: this.state.initPosition.lat,
+							longitude: this.state.initPosition.long,
 						},
-						{ unit: "meter" }
+						{
+							latitude: this.state.currentPosition.lat,
+							longitude: this.state.currentPosition.long,
+						},
+						{
+							unit: "meter",
+						}
 					)
 				});
 			}
@@ -140,8 +160,12 @@ export default class App extends Component {
 		}
 	}
 
+	componentDidMount() {
+		this.watchDevicePosition();
+	}
+
 	_getLocationAsync = async () => {
-		let { status } = await Permissions.askAsync(Permissions.LOCATION);
+		let {status} = await Permissions.askAsync(Permissions.LOCATION);
 		if (status !== "granted") {
 			this.setState({
 				errorMessage: "Permission to access location was denied"
@@ -151,8 +175,10 @@ export default class App extends Component {
 		let location = await Location.getCurrentPositionAsync({});
 		this.setState({
 			location,
-			initLat: location.coords.latitude,
-			initLong: location.coords.longitude
+			initPosition: {
+				lat: location.coords.latitude,
+				long: location.coords.longitude
+			},
 		});
 	};
 
@@ -160,7 +186,26 @@ export default class App extends Component {
 		navigator.geolocation.clearWatch(this.watchId);
 	}
 
+
+	getTitlePlayButton = () => {
+		return this.state.timerIsActive === "idol" || this.state.timerIsActive === "pause"
+			? "Start"
+			: "Stop";
+	};
+
 	render() {
+
+		const {
+			minutes,
+			seconds,
+			milliseconds,
+			format,
+			timeLapStack,
+			getTimeLapByIndex,
+		} = this.props.stopWatch;
+
+		const {timerIsActive} = this.state;
+
 		let speed = this.state.speed;
 		let distance;
 		let paceM;
@@ -177,31 +222,26 @@ export default class App extends Component {
 			paceS = "0";
 		}
 
+		console.log('timeLapStack: ', timeLapStack);
+		let lapTime = getTimeLapByIndex(timeLapStack.length - 1);
+		console.log('lapTime: ', lapTime);
 		return (
 			<View>
 				<LinearGradient
 					colors={["#009DF0", "#20DCFF"]}
 					style={styles.gradientContainer}
 				>
-					<Topnav />
+					<Topnav/>
 					<Trackers
 						distance={distance}
 						lapTime={
-							padToTwo(this.lapArr.min) +
-							":" +
-							padToTwo(this.lapArr.sec) +
-							":" +
-							padToTwo(this.lapArr.msec)
+							format(lapTime)
 						}
 						time={
-							padToTwo(this.state.min) +
-							":" +
-							padToTwo(this.state.sec) +
-							":" +
-							padToTwo(this.state.msec)
+							format([minutes, seconds, milliseconds])
 						}
 					/>
-					<PaceTracker pace={padToTwo(paceM) + ":" + padToTwo(paceS)} />
+					<PaceTracker pace={padToTwo(paceM) + ":" + padToTwo(paceS)}/>
 
 					<View
 						style={{
@@ -217,17 +257,15 @@ export default class App extends Component {
 							scrollEventThrottle={16}
 							horizontal={true}
 							showsHorizontalScrollIndicator={false}
-							style={{ flex: 4, height: 125 }}
+							style={{flex: 4, height: 125}}
 						>
-							<LapCards lap={this.lapArr} />
+							<LapCards lap={this.lapArr}/>
 						</ScrollView>
 
 						<TouchableOpacity
-							onPress={() =>
-								this.handleLap(this.state.min, this.state.sec, this.state.msec)
-							}
-							disabled={!this.state.start}
-							style={{ height: 125 }}
+							onPress={this.handleTimeLockLap}
+							disabled={timerIsActive === "idol" }
+							style={{height: 125}}
 						>
 							<View
 								style={{
@@ -237,7 +275,7 @@ export default class App extends Component {
 									borderColor: "white",
 									borderRadius: 15,
 									shadowColor: "#000",
-									shadowOffset: { width: 0, height: 1 },
+									shadowOffset: {width: 0, height: 1},
 									shadowOpacity: 0.22,
 									shadowRadius: 2.22,
 									elevation: 3,
@@ -290,25 +328,31 @@ export default class App extends Component {
 						}}
 					>
 						<Button
-							onPress={this.handleToggle}
-							title={!this.state.start ? "Start" : "Stop"}
-							color="white"
-							style={{ flex: 1, width: "50%" }}
+							onPress={this.handleToggleTimer}
+							title={this.getTitlePlayButton()}
+
+							style={{
+								flex: 1,
+								width: "50%",
+								color: '#222222',
+								backgroundColor: '#ffffff'
+							}}
 						/>
 						<Button
 							onPress={() =>
-								this.handleLap(this.state.min, this.state.sec, this.state.msec)
+								this.handleTimeLockLap(this.state.min, this.state.sec, this.state.msec)
 							}
-							disabled={!this.state.start}
+							disabled={
+								timerIsActive === "idol" || timerIsActive === "pause"
+							}
 							title="Lap"
-							color="white"
-							style={{ flex: 1, width: "50%" }}
+							style={{flex: 1, width: "50%"}}
 						/>
 						<Button
 							onPress={this.handleReset}
 							title="Reset"
-							color="white"
-							style={{ flex: 1, width: "50%" }}
+							disabled={timerIsActive === "idol"}
+							style={{flex: 1, width: "50%"}}
 						/>
 					</View>
 				</LinearGradient>
@@ -323,3 +367,6 @@ const styles = StyleSheet.create({
 		height: "100%"
 	}
 });
+
+
+export default withStopWatch(App);
