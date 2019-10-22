@@ -21,10 +21,7 @@ export const withStopWatch = WrapperComponent =>
 		};
 
 		reset = () => {
-			this.setState(state => ({
-				...state,
-				times: [0, 0, 0]
-			}));
+			this.setState(this.initialState);
 		};
 
 
@@ -42,40 +39,14 @@ export const withStopWatch = WrapperComponent =>
 			}
 		};
 
+		/**
+		 * @desc записать время круга
+		 * */
 		lap = () => {
 			this.setState(state => ({
 				timeLapStack: [...state.timeLapStack, this.state.times]
 			}));
 			return this.state.times;
-		};
-
-		timeToTimeStamp = (
-			time
-		) => {
-			const [
-				minutes,
-				seconds,
-				milliseconds
-			] = time;
-			console.log('time: ', time);
-			return (minutes * 60 * 1000) + (seconds * 60) + milliseconds;
-		};
-
-		getTimeLapByIndex = (lapIndex) => {
-			let lapTime = 0;
-			let timeLapStackLength = this.state.timeLapStack.length;
-
-			if (timeLapStackLength > 0) {
-				if(lapIndex > 0 && this.state.timeLapStack[lapIndex]){
-
-					let lastLapTime = this.timeToTimeStamp(this.state.timeLapStack[lapIndex]);
-					let prevLapTime = this.timeToTimeStamp(this.state.timeLapStack[lapIndex-1]);
-					console.log(lastLapTime);
-					console.log(prevLapTime);
-					lapTime = lastLapTime - prevLapTime;
-				}
-			}
-			return this.formatTimestamp(lapTime);
 		};
 
 		stop = () => {
@@ -171,7 +142,6 @@ export const withStopWatch = WrapperComponent =>
 						restart: this.restart,
 						reset: this.reset,
 						format: this.format,
-						getTimeLapByIndex: this.getTimeLapByIndex,
 					}}
 					{...this.props}
 				/>
