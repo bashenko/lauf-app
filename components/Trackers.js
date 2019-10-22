@@ -10,10 +10,6 @@ class Trackers extends React.Component {
           <Text style={styles.trackerText}>Meter</Text>
         </View>
         <View style={(styles.trackerCol, { flex: 2 })}>
-          <Text style={styles.trackerHead}>{this.props.lapTime}</Text>
-          <Text style={styles.trackerText}>Zeit</Text>
-        </View>
-        <View style={(styles.trackerCol, { flex: 2 })}>
           <Text style={styles.trackerHead}>{this.props.time}</Text>
           <Text style={styles.trackerText}>GesamtZeit</Text>
         </View>
