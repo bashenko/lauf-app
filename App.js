@@ -43,11 +43,8 @@ class App extends Component {
 
 	constructor(props) {
 		super(props);
-
+		this.scrollView = React.createRef();
 		this.state = this.initialState;
-
-		this.lapArr = [];
-
 	}
 
 
@@ -56,6 +53,8 @@ class App extends Component {
 			timerIsActive: 'idol', // idol, play, pause
 			currentPosition: {lat: 0, long: 0},
 			initPosition: {lat: 0, long: 0},
+			distanceStack: [],
+			segmentStack: [],
 
 			// old state
 			location: null,
@@ -90,13 +89,29 @@ class App extends Component {
 		}
 	};
 
-	timeToTimestamp = () => {
-		const {stopWatch: {seconds, minutes, hours,}} = this.props;
-	};
-
 	handleTimeLockLap = () => {
 		const {lap} = this.props.stopWatch;
 		lap();
+
+		let distance = null;
+		let currentPosition = this.state.currentPosition;
+		let segmentStackLength = this.state.segmentStack.length;
+		if (segmentStackLength > 0) {
+			distance = haversine(
+				{
+					latitude: currentPosition.lat,
+					longitude: currentPosition.long,
+				},
+				this.state.segmentStack[segmentStackLength - 1],
+				{
+					unit: "meter",
+				}
+			);
+		}
+		this.setState(() => ({
+			segmentStack: [...this.state.segmentStack, currentPosition],
+			distanceStack: [...this.state.distanceStack, ...(distance ? distance : [])],
+		}))
 	};
 
 	handleReset = () => {
@@ -105,12 +120,16 @@ class App extends Component {
 		reset();
 		this.setState({
 			distance: 0,
-			timerIsActive: 'idol'
+			timerIsActive: 'idol', // idol, play, pause
+			currentPosition: {lat: 0, long: 0},
+			initPosition: {lat: 0, long: 0},
+			distanceStack: [],
+			segmentStack: [],
 		});
 	};
 
 
-	watchDevicePosition = () =>{
+	watchDevicePosition = () => {
 		Location.watchPositionAsync(
 			{
 				enableHighAccuracy: true,
@@ -118,10 +137,11 @@ class App extends Component {
 				activityType: Location.ActivityType.Fitness
 			},
 			location2 => {
+				console.log('location2: ', location2);
 				this.setState({
 					location2,
 					speed: location2.coords.speed,
-					currentPosition:{
+					currentPosition: {
 						long: location2.coords.longitude,
 						lat: location2.coords.latitude,
 					},
@@ -201,10 +221,9 @@ class App extends Component {
 			milliseconds,
 			format,
 			timeLapStack,
-			getTimeLapByIndex,
 		} = this.props.stopWatch;
 
-		const {timerIsActive} = this.state;
+		const {timerIsActive, distanceStack} = this.state;
 
 		let speed = this.state.speed;
 		let distance;
@@ -222,9 +241,6 @@ class App extends Component {
 			paceS = "0";
 		}
 
-		console.log('timeLapStack: ', timeLapStack);
-		let lapTime = getTimeLapByIndex(timeLapStack.length - 1);
-		console.log('lapTime: ', lapTime);
 		return (
 			<View>
 				<LinearGradient
@@ -234,9 +250,6 @@ class App extends Component {
 					<Topnav/>
 					<Trackers
 						distance={distance}
-						lapTime={
-							format(lapTime)
-						}
 						time={
 							format([minutes, seconds, milliseconds])
 						}
@@ -254,17 +267,25 @@ class App extends Component {
 						}}
 					>
 						<ScrollView
+							ref={ref => this.scrollView = ref}
+							onContentSizeChange={(contentWidth, contentHeight)=>{
+								this.scrollView.scrollToEnd({animated: true});
+							}}
 							scrollEventThrottle={16}
 							horizontal={true}
 							showsHorizontalScrollIndicator={false}
 							style={{flex: 4, height: 125}}
 						>
-							<LapCards lap={this.lapArr}/>
+							<LapCards
+								timeFormat={format}
+								distanceStack={distanceStack}
+								lapStack={timeLapStack}
+							/>
 						</ScrollView>
 
 						<TouchableOpacity
 							onPress={this.handleTimeLockLap}
-							disabled={timerIsActive === "idol" }
+							disabled={timerIsActive === "idol"}
 							style={{height: 125}}
 						>
 							<View
@@ -339,9 +360,7 @@ class App extends Component {
 							}}
 						/>
 						<Button
-							onPress={() =>
-								this.handleTimeLockLap(this.state.min, this.state.sec, this.state.msec)
-							}
+							onPress={this.handleTimeLockLap}
 							disabled={
 								timerIsActive === "idol" || timerIsActive === "pause"
 							}
