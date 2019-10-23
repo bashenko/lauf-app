@@ -27,7 +27,7 @@ import {withStopWatch} from "./libs/withStopWatch";
 class App extends Component {
 
 	static propTypes = {
-		stopWatch: {
+		stopWatch: PropTypes.shape({
 			milliseconds: PropTypes.number,
 			seconds: PropTypes.number,
 			minutes: PropTypes.number,
@@ -36,7 +36,7 @@ class App extends Component {
 			reset: PropTypes.func,
 			lap: PropTypes.func,
 			restart: PropTypes.func,
-		}
+		})
 	};
 
 	watchId;
@@ -90,8 +90,8 @@ class App extends Component {
 	};
 
 	handleTimeLockLap = () => {
-		const {lap} = this.props.stopWatch;
-		lap();
+		const {lap, currentTime} = this.props.stopWatch;
+		lap(currentTime);
 
 		let distance = null;
 		let currentPosition = this.state.currentPosition;
@@ -129,15 +129,23 @@ class App extends Component {
 	};
 
 
-	watchDevicePosition = () => {
-		Location.watchPositionAsync(
+	watchDevicePosition = async () => {
+
+		if (Platform.OS === "android" && !Constants.isDevice) {
+			this.setState({
+				errorMessage:
+					"Oops, this will not work on Sketch in an Android emulator. Try it on your device!"
+			});
+		} else {
+			await this._getLocationAsync();
+		}
+		void Location.watchPositionAsync(
 			{
 				enableHighAccuracy: true,
 				timeInterval: 50,
 				activityType: Location.ActivityType.Fitness
 			},
 			location2 => {
-				console.log('location2: ', location2);
 				this.setState({
 					location2,
 					speed: location2.coords.speed,
@@ -170,14 +178,6 @@ class App extends Component {
 			}
 		);
 
-		if (Platform.OS === "android" && !Constants.isDevice) {
-			this.setState({
-				errorMessage:
-					"Oops, this will not work on Sketch in an Android emulator. Try it on your device!"
-			});
-		} else {
-			this._getLocationAsync();
-		}
 	}
 
 	componentDidMount() {
