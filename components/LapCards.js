@@ -34,7 +34,7 @@ class LapCards extends React.Component {
 							<Text style={{fontWeight: "900"}}>RUNDE {index + 1}</Text>
 							<Text style={{fontWeight: "200"}}>
                 {
-                  distanceStack[index]
+                  typeof distanceStack[index] === 'number' && distanceStack[index].toFixed(3)
                 }
 							</Text>
 							<Text
