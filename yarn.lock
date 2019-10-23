@@ -4262,11 +4262,6 @@ react-proxy@^1.1.7:
     lodash "^4.6.1"
     react-deep-force-update "^1.0.0"
 
-react-timer-hook@^1.1.7:
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/react-timer-hook/-/react-timer-hook-1.1.7.tgz#22c8dcf9bc7c1277b81e566298e1c5c8f9ea6673"
-  integrity sha512-Moolg4qj1FpdQmkPXe8mE3GPeS2lgJnxvldfdVnSzPMM6KwWzmks0OPT5LxcdYFyuQB0rulQHD4yAu9RQqWh7A==
-
 react-timer-mixin@^0.13.4:
   version "0.13.4"
   resolved "https://registry.yarnpkg.com/react-timer-mixin/-/react-timer-mixin-0.13.4.tgz#75a00c3c94c13abe29b43d63b4c65a88fc8264d3"
@@ -4906,6 +4901,11 @@ through@^2.3.6:
   version "2.3.8"
   resolved "https://registry.yarnpkg.com/through/-/through-2.3.8.tgz#0dd4c9ffaabc357960b1b724115d7e0e86a2e1f5"
   integrity sha1-DdTJ/6q8NXlgsbckEV1+Doai4fU=
+
+time-convert@^0.0.2:
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/time-convert/-/time-convert-0.0.2.tgz#1c3fd1c25b384a47b05318d07a12f16bb7618810"
+  integrity sha512-EjcbpyEuCOz6v7iCmTRIOT7aqPgcrVobwikS94rw7OXdtHyPPTDmE9tmK7wt0KFkHvcPGAOq0Nk9NXuIMgpJcg==
 
 time-stamp@^1.0.0:
   version "1.1.0"
