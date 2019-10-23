@@ -50,8 +50,9 @@ class App extends Component {
 	get initialState() {
 		return {
 			timerIsActive: 'idol', // idol, play, pause
-			currentPosition: {lat: 0, long: 0},
-			initPosition: {lat: 0, long: 0},
+			currentPosition: {latitude: 0, longitude: 0},
+			initPosition: {latitude: 0, longitude: 0},
+			allDistance: 0,
 			distanceStack: [],
 			segmentStack: [],
 
@@ -64,10 +65,11 @@ class App extends Component {
 		}
 	}
 
-	handleToggleTimer = () => {
+	handleToggleTimer = async () => {
 		const {stopWatch: {start, stop}} = this.props;
 
 		if (this.state.timerIsActive === 'idol') {
+			await this._getLocationAsync();
 			start();
 			this.setState({
 				...this.state,
@@ -93,23 +95,29 @@ class App extends Component {
 		lap(currentTime);
 
 		let distance = null;
-		let currentPosition = this.state.currentPosition;
+		let currentPosition = Object.assign({}, this.state.currentPosition);
 		let segmentStackLength = this.state.segmentStack.length;
+		console.log(segmentStackLength);
 		if (segmentStackLength > 0) {
+			console.log('currentPosition: ', currentPosition);
+			console.log('this.state.segmentStack[segmentStackLength - 1]: ', this.state.segmentStack[segmentStackLength - 1]);
 			distance = haversine(
-				{
-					latitude: currentPosition.lat,
-					longitude: currentPosition.long,
-				},
+				currentPosition,
 				this.state.segmentStack[segmentStackLength - 1],
 				{
 					unit: "meter",
 				}
 			);
+			console.log('distance: ', distance);
+			console.log('this.state.segmentStack: ', this.state.segmentStack);
+			console.log('this.state.distanceStack: ', this.state.distanceStack);
 		}
-		this.setState(() => ({
+
+
+		this.setState((state) => ({
+			allDistance: distance != null ? state.allDistance + distance : state.allDistance,
 			segmentStack: [...this.state.segmentStack, currentPosition],
-			distanceStack: [...this.state.distanceStack, ...(distance ? distance : [])],
+			distanceStack: [...this.state.distanceStack, ...(distance !== null ? [distance] : [])],
 		}))
 	};
 
@@ -120,8 +128,8 @@ class App extends Component {
 		this.setState({
 			distance: 0,
 			timerIsActive: 'idol', // idol, play, pause
-			currentPosition: {lat: 0, long: 0},
-			initPosition: {lat: 0, long: 0},
+			currentPosition: {latitude: 0, longitude: 0},
+			initPosition: {latitude: 0, longitude: 0},
 			distanceStack: [],
 			segmentStack: [],
 		});
@@ -129,51 +137,50 @@ class App extends Component {
 
 
 	watchDevicePosition = async () => {
+		const stat = await Location.hasServicesEnabledAsync()
+		console.log('hasServicesEnabledAsync: ', stat);
+		console.log('Platform.OS: ', Platform.OS);
+		console.log('Constants.isDevice: ', Constants.isDevice);
+		await this._getLocationAsync();
+		// if (Platform.OS === "android" && !Constants.isDevice) {
+		// 	this.setState({
+		// 		errorMessage:
+		// 			"Oops, this will not work on Sketch in an Android emulator. Try it on your device!"
+		// 	});
+		// } else {
+		// 	await this._getLocationAsync();
+		// }
 
-		if (Platform.OS === "android" && !Constants.isDevice) {
-			this.setState({
-				errorMessage:
-					"Oops, this will not work on Sketch in an Android emulator. Try it on your device!"
-			});
-		} else {
-			await this._getLocationAsync();
-		}
-		void Location.watchPositionAsync(
+		await Location.watchPositionAsync(
 			{
 				enableHighAccuracy: true,
-				timeInterval: 50,
+				timeInterval: 100,
+				distanceInterval: 0,
 				activityType: Location.ActivityType.Fitness
 			},
 			location2 => {
-				this.setState({
+				this.setState((state) => ({
+					...state,
 					location2,
 					speed: location2.coords.speed,
 					currentPosition: {
-						long: location2.coords.longitude,
-						lat: location2.coords.latitude,
-					},
-					distStart: {
-						latitude: this.state.initPosition.lat,
-						longitude: this.state.initPosition.long,
-					},
-					distEnd: {
-						latitude: this.state.currentPosition.lat,
-						longitude: this.state.currentPosition.long,
+						longitude: location2.coords.longitude,
+						latitude: location2.coords.latitude,
 					},
 					distance: haversine(
 						{
-							latitude: this.state.initPosition.lat,
-							longitude: this.state.initPosition.long,
+							latitude: this.state.initPosition.latitude,
+							longitude: this.state.initPosition.longitude,
 						},
 						{
-							latitude: this.state.currentPosition.lat,
-							longitude: this.state.currentPosition.long,
+							latitude: this.state.currentPosition.latitude,
+							longitude: this.state.currentPosition.longitude,
 						},
 						{
 							unit: "meter",
 						}
 					)
-				});
+				}));
 			}
 		);
 
@@ -191,14 +198,20 @@ class App extends Component {
 			});
 		}
 
-		let location = await Location.getCurrentPositionAsync({});
-		this.setState({
+		let location = await Location.getCurrentPositionAsync({enableHighAccuracy: true});
+		this.setState((state) => ({
+			...state,
 			location,
 			initPosition: {
-				lat: location.coords.latitude,
-				long: location.coords.longitude
+				latitude: location.coords.latitude,
+				longitude: location.coords.longitude
 			},
-		});
+			segmentStack: [{
+				latitude: location.coords.latitude,
+				longitude: location.coords.longitude
+			}],
+
+		}));
 	};
 
 	componentWillUnmount() {
@@ -267,7 +280,7 @@ class App extends Component {
 					>
 						<ScrollView
 							ref={ref => this.scrollView = ref}
-							onContentSizeChange={(contentWidth, contentHeight)=>{
+							onContentSizeChange={(contentWidth, contentHeight) => {
 								this.scrollView.scrollToEnd({animated: true});
 							}}
 							scrollEventThrottle={16}
