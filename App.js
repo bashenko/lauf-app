@@ -14,7 +14,6 @@ import PropTypes from 'prop-types'; // ES6
 
 import Topnav from "./components/Topnav/Topnav.js";
 import Trackers from "./components/Trackers.js";
-import LapCard from "./components/LapCard.js";
 import LapCards from "./components/LapCards.js";
 import PaceTracker from "./components/PaceTracker.js";
 
