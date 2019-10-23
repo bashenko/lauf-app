@@ -52,7 +52,7 @@ class App extends Component {
 			timerIsActive: 'idol', // idol, play, pause
 			currentPosition: {latitude: 0, longitude: 0},
 			initPosition: {latitude: 0, longitude: 0},
-			allDistance: 0,
+			allLapDistance: 0,
 			distanceStack: [],
 			segmentStack: [],
 
@@ -70,19 +70,21 @@ class App extends Component {
 
 		if (this.state.timerIsActive === 'idol') {
 			await this._getLocationAsync();
-			start();
+			start(); // start timer
 			this.setState({
 				...this.state,
+				distance: 0,
+				allLapDistance: 0,
 				timerIsActive: 'play',
 			})
 		} else if (this.state.timerIsActive === 'pause') {
-			start();
+			start(); // start timer
 			this.setState({
 				...this.state,
 				timerIsActive: 'play',
 			})
 		} else if (this.state.timerIsActive === 'play') {
-			stop();
+			stop(); // stop timer
 			this.setState({
 				...this.state,
 				timerIsActive: 'pause',
@@ -97,10 +99,8 @@ class App extends Component {
 		let distance = null;
 		let currentPosition = Object.assign({}, this.state.currentPosition);
 		let segmentStackLength = this.state.segmentStack.length;
-		console.log(segmentStackLength);
+
 		if (segmentStackLength > 0) {
-			console.log('currentPosition: ', currentPosition);
-			console.log('this.state.segmentStack[segmentStackLength - 1]: ', this.state.segmentStack[segmentStackLength - 1]);
 			distance = haversine(
 				currentPosition,
 				this.state.segmentStack[segmentStackLength - 1],
@@ -108,14 +108,9 @@ class App extends Component {
 					unit: "meter",
 				}
 			);
-			console.log('distance: ', distance);
-			console.log('this.state.segmentStack: ', this.state.segmentStack);
-			console.log('this.state.distanceStack: ', this.state.distanceStack);
 		}
-
-
 		this.setState((state) => ({
-			allDistance: distance != null ? state.allDistance + distance : state.allDistance,
+			allLapDistance: distance != null && !isNaN(distance) ? state.allLapDistance + distance : state.allLapDistance,
 			segmentStack: [...this.state.segmentStack, currentPosition],
 			distanceStack: [...this.state.distanceStack, ...(distance !== null ? [distance] : [])],
 		}))
@@ -127,6 +122,7 @@ class App extends Component {
 		reset();
 		this.setState({
 			distance: 0,
+			allLapDistance: 0,
 			timerIsActive: 'idol', // idol, play, pause
 			currentPosition: {latitude: 0, longitude: 0},
 			initPosition: {latitude: 0, longitude: 0},
@@ -138,9 +134,7 @@ class App extends Component {
 
 	watchDevicePosition = async () => {
 		const stat = await Location.hasServicesEnabledAsync()
-		console.log('hasServicesEnabledAsync: ', stat);
-		console.log('Platform.OS: ', Platform.OS);
-		console.log('Constants.isDevice: ', Constants.isDevice);
+
 		await this._getLocationAsync();
 		// if (Platform.OS === "android" && !Constants.isDevice) {
 		// 	this.setState({
@@ -154,11 +148,32 @@ class App extends Component {
 		await Location.watchPositionAsync(
 			{
 				enableHighAccuracy: true,
-				timeInterval: 100,
+				timeInterval: 250,
 				distanceInterval: 0,
-				activityType: Location.ActivityType.Fitness
+				activityType: Location.ActivityType.Fitness,
+				accuracy: Location.Accuracy.Highest,
 			},
 			location2 => {
+
+				if(this.state.timerIsActive !== 'play'){
+					return;
+				}
+				let distance = haversine(
+					{
+						latitude: this.state.initPosition.latitude,
+						longitude: this.state.initPosition.longitude,
+					},
+					{
+						latitude: this.state.currentPosition.latitude,
+						longitude: this.state.currentPosition.longitude,
+					},
+					{
+						unit: "meter",
+					}
+				);
+
+
+
 				this.setState((state) => ({
 					...state,
 					location2,
@@ -167,19 +182,7 @@ class App extends Component {
 						longitude: location2.coords.longitude,
 						latitude: location2.coords.latitude,
 					},
-					distance: haversine(
-						{
-							latitude: this.state.initPosition.latitude,
-							longitude: this.state.initPosition.longitude,
-						},
-						{
-							latitude: this.state.currentPosition.latitude,
-							longitude: this.state.currentPosition.longitude,
-						},
-						{
-							unit: "meter",
-						}
-					)
+					distance: isNaN(distance) ? 0 : distance
 				}));
 			}
 		);
@@ -225,6 +228,20 @@ class App extends Component {
 			: "Stop";
 	};
 
+	/**
+	 * @returns number[] - [minutes,seconds]
+	 * */
+	getPace = (meterPerSeconds) => {
+		if (typeof meterPerSeconds === 'number') {
+			let paceM = Math.floor(1000 / meterPerSeconds / 60);
+			let paceS = Math.floor((1000 / meterPerSeconds) % 60);
+			return [paceM, paceS]
+		}
+		return [0, 0];
+	}
+
+	padToTwo = number => (number <= 9 ? `0${number}` : number)
+
 	render() {
 
 		const {
@@ -236,21 +253,16 @@ class App extends Component {
 		} = this.props.stopWatch;
 
 		const {timerIsActive, distanceStack} = this.state;
-
 		let speed = this.state.speed;
 		let distance;
-		let paceM;
-		let paceS;
-		let padToTwo = number => (number <= 9 ? `0${number}` : number);
+		let pace;
 
-		if (speed > 0) {
+		if (speed >= 0 && !isNaN(this.state.distance)) {
 			distance = Math.floor(this.state.distance * 100) / 100;
-			paceM = Math.floor(1000 / this.state.speed / 60);
-			paceS = Math.floor((1000 / this.state.speed) % 60);
+			pace = this.getPace(this.state.speed);
 		} else {
 			distance = "paused";
-			paceM = "0";
-			paceS = "0";
+			pace = ['0', '0'];
 		}
 
 		return (
@@ -266,7 +278,11 @@ class App extends Component {
 							format([minutes, seconds, milliseconds])
 						}
 					/>
-					<PaceTracker pace={padToTwo(paceM) + ":" + padToTwo(paceS)}/>
+					<PaceTracker
+						pace={
+							this.padToTwo(pace[0]) + ':' + this.padToTwo(pace[1])
+						}
+					/>
 
 					<View
 						style={{
